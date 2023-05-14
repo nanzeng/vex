@@ -2,74 +2,82 @@
 ## Introduction
 This bot is built with Vex IQ 2nd generation components. Most of the parts are available from the competition kit. I also borrowed some beams and shafts from Hexbug build blitz. Here is a picture of it. <img src="omnibot.jpg" height="300" width="400"> It uses 4 omni-directional wheels, which are located on the 4 corners of the bot.
 
-## Moving modes
-### Omni-directional move
-In this mode, the bot can move in any direction without changing its brain's heading direction. It is like sliding on the ice. To achieve this behavior, let's first work out some mathematics. Assuming all the wheels moving in the same direction, we have the following vectors to represent the wheel velocities:
-|Wheel|Vector|
-|--|--|
-|Left front wheel|$$\vec{v_1}$$|
-|Right front wheel|$$\vec{v_2}$$|
-|Right back wheel|$$\vec{v_3}$$|
-|Left back wheel|$$\vec{v_4}$$|
+## How does it work
+To understand how the robot moves, we can represent each wheel by a vector, and decompose the vector along $x$ and $y$ axes. As shown in the following graph, left front wheel is represented by $\vec{v_1}$, right front wheel is represented by $\vec{v_2}$, right back wheel is represented by $\vec{v_3}$ and left back wheel is represented by $\vec{v_4}$. The angle between $\vec{v_1}$ and $y$ axis is $\alpha$. For the other vectors, the angles relative to $y$ axis are $\alpha + \frac{1}{2}\pi$, $\alpha + \pi$ and $\alpha + \frac{3}{2}\pi$ respectively.
 
-Let $\vec{v_1}$ has an angle $\alpha$ with $y$ axis. Then $\vec{v_2}$ angle is $\alpha + \frac{\pi}{2}$. $\vec{v_3}$ angle is $\alpha + \pi$. $\vec{v_4}$ angle is $\alpha + \frac{3\pi}{2}$. So we have the following equations:
+![](vectors.png)
 
-$$v_1\cos\alpha + v_2\cos(\alpha+\frac{\pi}{2}) + v_3\cos(\alpha+\pi) + v_4\cos(\alpha+\frac{3\pi}{2}) = v_y$$
+Thus by decomposing these vectors, we have the following equations
 
-$$v_1\sin\alpha + v_2\sin(\alpha+\frac{\pi}{2}) + v_3\sin(\alpha+\pi) + v_4\sin(\alpha+\frac{3\pi}{2}) = v_x$$
+$$v_x = v_1\sin\alpha + v_2\sin(\alpha+\frac{1}{2}\pi) + v_3\sin(\alpha+\pi) + v_4\sin(\alpha+\frac{3}{2}\pi)$$
 
-Using the following trignometry relations:
+$$v_y = v_1\cos\alpha + v_2\cos(\alpha+\frac{1}{2}\pi) + v_3\cos(\alpha+\pi) + v_4\cos(\alpha+\frac{3}{2}\pi)$$
 
-$$\cos(\alpha+\frac{\pi}{2}) = - \sin\alpha$$
+Using the following trignometry equations,
+
+$$\cos(\alpha+\frac{1}{2}\pi) = - \sin\alpha$$
 
 $$\cos(\alpha+\pi) = - \cos\alpha$$
 
-$$\cos(\alpha+\frac{3\pi}{2}) = \sin\alpha$$
+$$\cos(\alpha+\frac{3}{2}\pi) = \sin\alpha$$
 
-we have
+$$\sin(\alpha+\frac{1}{2}\pi) = \cos\alpha$$
 
-$$v_1\cos\alpha - v_2\sin\alpha - v_3\cos\alpha + v_4\sin\alpha = v_y$$
+$$\sin(\alpha+\pi) = - \sin\alpha$$
 
-$$v_1\sin\alpha + v_2\cos\alpha - v_3\sin\alpha - v_4\cos\alpha = v_x$$
+$$\sin(\alpha+\frac{3}{2}\pi) = -\cos\alpha$$
 
-which is
+We can simplify the vector equations to
 
-$$(v_1 - v_3)\cos\alpha - (v_2 - v_4)\sin\alpha = v_y$$
+$$v_x = v_1\sin\alpha + v_2\cos\alpha - v_3\sin\alpha - v_4\cos\alpha$$
 
-$$(v_1 - v_3)\sin\alpha + (v_2 - v_4)\cos\alpha = v_x$$
+$$v_y = v_1\cos\alpha - v_2\sin\alpha - v_3\cos\alpha + v_4\sin\alpha$$
 
-which gives
+which can be reorganized to
+
+$$v_x = (v_1 - v_3)\sin\alpha + (v_2 - v_4)\cos\alpha$$
+
+$$v_y = (v_1 - v_3)\cos\alpha - (v_2 - v_4)\sin\alpha$$
+
+Solving these equations give
 
 $$v_1 - v_3 = v_y\cos\alpha + v_x\sin\alpha$$
 
 $$v_2 - v_4 = v_x\cos\alpha - v_y\sin\alpha$$
 
-With above equations, if we want the bot to move on a straight line, we can set $v_x = 0$, which gives
+Notice that $\vec{v_1}$ and $\vec{v_3}$ works as a motor group, and $\vec{v_2}$ and $\vec{v_4}$ works as a motor group. With above equations, we can let the robot make some special moves.
+
+### Move in a straight line
+
+In order to move in a straight line, we can set $v_x$ to zero, which gives
 
 $$v_1 - v_3 = v_y\cos\alpha$$
 
 $$v_4 - v_2 = v_y\sin\alpha$$
 
-Notice that $v_1$ and $v_3$ works as a group and $v_2$ and $v_4$ works as a group. The velocity can be arbitrary as long as the total velocity fulfills the equation specified. In general, even though $v_x$ is zero, which means the robot cann't move sideways. There can be still a rotation force along its vertical axis. Thus the bot will rotate along its vertical axis while moving in a straight line. We can make sure both wheels in the same motor group moving with same velocity, which will remove this rotation force. In this case, the velocities are
+Within the same motor group, when both wheels moving in the same direction with the same speed, they will keep in a straight line, otherwise, they will rotate along its $z$ axis. Thus to keep the robot moving in a straight line without rotation, we have
 
 $$v_1 = -v_3 = \frac{1}{2}v_y\cos\alpha$$
 
 $$v_4 = -v_2 = \frac{1}{2}v_y\sin\alpha$$
 
-The negative sign means that the wheels rotate in different directions.
-If we want the bot to rotate along its axis, with the following equations
+The negative sign here means that the vector direction is opposite to what we have specified previsouly.
+
+### Move in a straight line and rotate along $z$ axis
+
+As discussed in previous section, when the velocities within a motor group are not equal, there will be a rotation movement. Using the following trignometry equations
 
 $$\cos{2\alpha} = \cos^2\alpha - \sin^2\alpha$$
 
 $$\sin\alpha = \cos(\frac{\pi}{2}-\alpha)$$
 
-We have 
+We can derive
 
 $$v_1 - v_3 = v_y(\cos^2\frac{\alpha}{2} - \sin^2\frac{\alpha}{2})$$
 
 $$v_4 - v_2 = v_y(\cos^2(\frac{\pi}{4}-\frac{\alpha}{2}) - \sin^2(\frac{\pi}{4}-\frac{\alpha}{2}))$$
 
-Thus we have
+which gives
 
 $$v_1 = v_y\cos^2\frac{\alpha}{2}$$
 
@@ -79,5 +87,11 @@ $$v_3 = v_y\sin^2\frac{\alpha}{2}$$
 
 $$v_4 = v_y\cos^2(\frac{\pi}{4} - \frac{\alpha}{2})$$
 
-This is just one of the solutions. We choose these formulas so that the velocity has a maximum value of $v_y$.
+This is just one of the solutions. We choose these formulas so that the velocity has a maximum value of $v_y$. Assuming the moving direction has an angle $\theta$ with $y$ axis, if we rotate the coordinates by $\theta$ so that $y'$ is in the moving direction, then angle $\alpha$ becomes $\alpha' = \alpha - \theta$
 
+### Omni-directional move
+In this moving mode, instead of just moving the robot along its $y$ axis, the robot can move in any angle relative to $y$. The robot will keep its heading towards $y$ but moving in direction $y'$ which has an angle $\theta$ relative to $y$. Imagine we rotate the coordinates $x$-$y$ to $x'$-$y'$, then $\alpha$ will become $\alpha - \theta$, thus we have the following equations
+
+$$v_1 = -v_3 = \frac{1}{2}v_y\cos(\alpha-\theta)$$
+
+$$v_4 = -v_2 = \frac{1}{2}v_y\sin(\alpha-\theta)$$
